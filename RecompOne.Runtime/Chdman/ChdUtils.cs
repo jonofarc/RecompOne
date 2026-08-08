@@ -1,11 +1,12 @@
-
 using System.Diagnostics;
 
 namespace RecompOne.Runtime.Chdman;
 
-
 public static class ChdUtils
 {
+    private static readonly string[] _loadingFrames = { "|", "/", "-", "\\" };
+    private static int _loadingFrame;
+    private static DateTime _lastLoadingUpdate = DateTime.UtcNow;
 
     public static bool UnpackChd(string path)
     {
@@ -69,7 +70,25 @@ public static class ChdUtils
 
     public static string GetCuePath(string chdPath)
     {
-        return Path.ChangeExtension(chdPath, ".cue"); 
+        return Path.ChangeExtension(chdPath, ".cue");
     }
 
+    public static string UpdateLoadingAnimation()
+    {
+        var now = DateTime.UtcNow;
+
+        if ((now - _lastLoadingUpdate).TotalMilliseconds >= 100)
+        {
+            _loadingFrame = (_loadingFrame + 1) % _loadingFrames.Length;
+            _lastLoadingUpdate = now;
+        }
+
+        return $"Verifying and unpacking CHD {_loadingFrames[_loadingFrame]}";
+    }
+
+    public static void ResetLoadingAnimation()
+    {
+        _loadingFrame = 0;
+        _lastLoadingUpdate = DateTime.UtcNow;
+    }
 }

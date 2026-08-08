@@ -17,7 +17,7 @@ internal sealed class DiscPickerPopup : IPanel
 
     byte[] _pathBuf = new byte[BufSize];
     string _error = "";
-    string _message = "";
+    bool _unpackingChd = false;
     bool _pendingOpen;
 
     public void Show()
@@ -77,12 +77,12 @@ internal sealed class DiscPickerPopup : IPanel
             ImGui.TextWrapped(_error);
             ImGui.PopStyleColor();
         }
-        if (_message.Length > 0)
+        if (_unpackingChd)
         {
             ImGui.Spacing(); 
-            ImGui.TextWrapped(_message);
+            ImGui.TextWrapped(ChdUtils.UpdateLoadingAnimation());
             ImGui.PopStyleColor();
-        }
+        } 
 
         ImGui.Spacing();
         ImGui.Separator();
@@ -151,18 +151,18 @@ internal sealed class DiscPickerPopup : IPanel
         {
             Console.WriteLine("CHD detected!");
 
-            _message = "Verifying and unpacking CHD"; 
+            _unpackingChd = true; 
 
             var success = await Task.Run(() => ChdUtils.UnpackChd(path));
 
             if (!success)
             {
-                _message = "";
+                _unpackingChd = false;
                 _error = $"Failed to unpack CHD disc image: {path}";
                 return;
             }
 
-            _message = "";
+
 
             path = ChdUtils.GetCuePath(path);
         }
