@@ -1,6 +1,7 @@
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 
-namespace RecompOne.Runtime.Chdman;
+namespace RecompOne.Runtime.Chd;
 
 public static class ChdUtils
 {
@@ -21,20 +22,30 @@ public static class ChdUtils
             if (File.Exists(cuePath))
                 return true;
 
-            var chdmanPath = Path.Combine(
-                AppContext.BaseDirectory,
-                "chdman",
-                "chdman.exe");
+            var chdmanPath = GetChdmanPath();
+
+            Console.WriteLine($"Using chdman: {chdmanPath}");
+
+            if (!File.Exists(chdmanPath))
+            {
+                Console.WriteLine($"chdman executable not found: {chdmanPath}");
+                return false;
+            }
 
             var processInfo = new ProcessStartInfo
             {
                 FileName = chdmanPath,
-                Arguments = $"extractcd -i \"{path}\" -o \"{cuePath}\"",
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 CreateNoWindow = true
             };
+
+            processInfo.ArgumentList.Add("extractcd");
+            processInfo.ArgumentList.Add("-i");
+            processInfo.ArgumentList.Add(path);
+            processInfo.ArgumentList.Add("-o");
+            processInfo.ArgumentList.Add(cuePath);
 
             using var process = Process.Start(processInfo);
 
@@ -58,14 +69,60 @@ public static class ChdUtils
                 return false;
 
             Console.WriteLine($"CHD converted to: {cuePath}");
+
+            return true;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"CHD conversion failed: {ex}");
             return false;
         }
+    }
 
-        return true;
+    private static string GetChdmanPath()
+    {
+        var os = GetOperatingSystem();
+        var architecture = GetArchitecture();
+
+        var executable = OperatingSystem.IsWindows()
+            ? "chdman.exe"
+            : "chdman";
+
+        return Path.Combine(
+            AppContext.BaseDirectory,
+            "chd",
+            "chdman",
+            os,
+            architecture,
+            executable); 
+    } 
+
+    private static string GetOperatingSystem()
+    {
+        if (OperatingSystem.IsWindows())
+            return "Windows";
+
+        if (OperatingSystem.IsLinux())
+            return "Linux";
+
+        if (OperatingSystem.IsMacOS())
+            return "MacOS";
+
+        throw new PlatformNotSupportedException(
+            $"CHD unpacking is not supported on {RuntimeInformation.OSDescription}.");
+    }
+
+    private static string GetArchitecture()
+    {
+        return RuntimeInformation.OSArchitecture switch
+        {
+            Architecture.X64 => "x64",
+            Architecture.Arm64 => "arm64",
+
+            _ => throw new PlatformNotSupportedException(
+                $"CHD unpacking is not supported on architecture " +
+                $"{RuntimeInformation.OSArchitecture}.")
+        };
     }
 
     public static string GetCuePath(string chdPath)

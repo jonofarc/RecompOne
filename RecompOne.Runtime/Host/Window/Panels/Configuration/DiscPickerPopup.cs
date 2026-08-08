@@ -3,7 +3,7 @@ using System.Text;
 using ImGuiNET;
 using NativeFileDialogSharp;
 using RecompOne.Runtime.Config;
-using RecompOne.Runtime.Chdman;
+using RecompOne.Runtime.Chd;
 
 namespace RecompOne.Runtime.Host.Window;
 
