@@ -17,6 +17,7 @@ internal sealed class DiscPickerPopup : IPanel
 
     byte[] _pathBuf = new byte[BufSize];
     string _error = "";
+    string _message = "";
     bool _pendingOpen;
 
     public void Show()
@@ -76,6 +77,12 @@ internal sealed class DiscPickerPopup : IPanel
             ImGui.TextWrapped(_error);
             ImGui.PopStyleColor();
         }
+        if (_message.Length > 0)
+        {
+            ImGui.Spacing(); 
+            ImGui.TextWrapped(_message);
+            ImGui.PopStyleColor();
+        }
 
         ImGui.Spacing();
         ImGui.Separator();
@@ -106,7 +113,7 @@ internal sealed class DiscPickerPopup : IPanel
             else if (currentPath.Length > 0 && Directory.Exists(currentPath))
                 defaultDir = Path.GetFullPath(currentPath);
 
-            var result = Dialog.FileOpen("cue", defaultDir);
+            var result = Dialog.FileOpen("cue,chd", defaultDir);
             if (result.IsOk && !string.IsNullOrWhiteSpace(result.Path))
             {
                 SetPathBuf(result.Path);
@@ -130,32 +137,36 @@ internal sealed class DiscPickerPopup : IPanel
         _error = "";
     }
 
-    void TryConfirm()
+    async void TryConfirm()
     {
         var path = Encoding.UTF8.GetString(_pathBuf).TrimEnd('\0').Trim();
+
         if (!File.Exists(path))
         {
-            _error = "File was not found please check the path and try again";
+            _error = "File was not found. Please check the path and try again.";
             return;
         }
-        
-     
-       if (Path.GetExtension(path).Equals(".chd", StringComparison.OrdinalIgnoreCase))
-       {
-           Console.WriteLine("CHD detected!");
 
-           if (!ChdUtils.UnpackChd(path))
-           {
-               _error = (
-                   $"Failed to unpack CHD disc image: {path}");
-               return;
-           }
+        if (Path.GetExtension(path).Equals(".chd", StringComparison.OrdinalIgnoreCase))
+        {
+            Console.WriteLine("CHD detected!");
 
-           path = ChdUtils.GetCuePath(path);
-       }
-  
+            _message = "Verifying and unpacking CHD"; 
 
-        
+            var success = await Task.Run(() => ChdUtils.UnpackChd(path));
+
+            if (!success)
+            {
+                _message = "";
+                _error = $"Failed to unpack CHD disc image: {path}";
+                return;
+            }
+
+            _message = "";
+
+            path = ChdUtils.GetCuePath(path);
+        }
+
         if (Runtime.ValidateDisc(path) is { } problem)
         {
             _error = problem;
