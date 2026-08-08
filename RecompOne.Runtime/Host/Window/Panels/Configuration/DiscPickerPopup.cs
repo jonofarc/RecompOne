@@ -3,6 +3,7 @@ using System.Text;
 using ImGuiNET;
 using NativeFileDialogSharp;
 using RecompOne.Runtime.Config;
+using RecompOne.Runtime.Chdman;
 
 namespace RecompOne.Runtime.Host.Window;
 
@@ -137,6 +138,22 @@ internal sealed class DiscPickerPopup : IPanel
             _error = "File was not found please check the path and try again";
             return;
         }
+        
+     
+       if (Path.GetExtension(path).Equals(".chd", StringComparison.OrdinalIgnoreCase))
+       {
+           Console.WriteLine("CHD detected!");
+
+           if (!ChdUtils.UnpackChd(path))
+           {
+               _error = (
+                   $"Failed to unpack CHD disc image: {path}");
+               return;
+           }
+
+           path = ChdUtils.GetCuePath(path);
+       }
+  
 
         
         if (Runtime.ValidateDisc(path) is { } problem)
